@@ -1,0 +1,34 @@
+name: Run Pakistan Time Agent
+
+on:
+  workflow_dispatch: # Allows you to run it manually with a button
+  schedule:
+    - cron: '0 * * * *' # Optional: Runs every hour
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: pip install requests pytz
+
+      - name: Run Agent
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: python agent.py
+
+      - name: Commit and Push log.txt
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+          git add log.txt
+          git commit -m "Update time log" || exit 0
+          git push
