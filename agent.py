@@ -1,46 +1,48 @@
-import time
-import datetime
-import pytz
 import requests
-import antigravity # The "magic" requirement
+from bs4 import BeautifulSoup
+import time
+import antigravity
 
 # Configuration
-OPENROUTER_API_KEY = "your_api_key_here"
-MODEL = "google/gemini-2.0-flash-lite-preview-02-05:free"
+# Note: In a real scenario, you'd use a dedicated Cricket API, 
+# but for a simple agent, we scrape a live-score summary page.
+URL = "https://www.espncricinfo.com/live-cricket-score" 
 
-def ask_agent_to_log(current_time):
-    # This sends the time to the AI to get a 'reaction' or confirmation
-    response = requests.post(
-        url="https://openrouter.ai/api/v1/chat/completions",
-        headers={"Authorization": f"Bearer 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"},
-        json={
-            "model": MODEL,
-            "messages": [{"role": "user", "content": f"The current time in Pakistan is {current_time}. Acknowledge this for the log."}]
-        }
-    )
-    return response.json()['choices'][0]['message']['content']
+def fetch_live_score():
+    try:
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        response = requests.get(URL, headers=headers)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        
+        # Finding the specific match container for SA vs NZ
+        # This logic looks for the team names in the live feed
+        matches = soup.find_all(class_='ci-team-score')
+        
+        score_text = "Match not found or not live yet."
+        
+        for match in matches:
+            if "South Africa" in match.text or "New Zealand" in match.text:
+                score_text = match.get_text(separator=" ")
+                break
+        
+        return score_text
+    except Exception as e:
+        return f"Error fetching score: {e}"
 
 def main():
-    pakistan_tz = pytz.timezone('Asia/Karachi')
-    
     for i in range(3):
-        # 1. Fetch Time
-        now = datetime.datetime.now(pakistan_tz)
-        time_str = now.strftime("%Y-%m-%d %H:%M:%S")
+        score = fetch_live_score()
+        timestamp = time.strftime("%H:%M:%S")
         
-        # 2. Get AI Commentary (Optional Agentic Step)
-        print(f"Iteration {i+1}: Fetching time...")
+        log_entry = f"[{timestamp}] SA vs NZ: {score}\n"
         
-        # 3. Save to File
-        with open("log.txt", "a") as f:
-            f.write(f"Timestamp: {time_str}\n")
+        with open("score.txt", "a") as f:
+            f.write(log_entry)
+            
+        print(f"Iteration {i+1} saved: {score}")
         
-        print(f"Saved: {time_str}")
-        
-        if i < 2: # Don't sleep after the last run
+        if i < 2:
             time.sleep(10)
-
-    print("Task complete. 3 logs saved.")
 
 if __name__ == "__main__":
     main()
