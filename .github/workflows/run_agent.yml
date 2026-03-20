@@ -1,4 +1,4 @@
-name: Run Cricket Score Agent
+name: Run Agent
 
 on:
   workflow_dispatch:
@@ -15,7 +15,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Required to see the full history for rebasing
+          fetch-depth: 0 
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -35,15 +35,14 @@ jobs:
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
           
-          # Add the files
-          git add log.txt score.txt || exit 0
+          # Pull the absolute latest changes from your repo first
+          git pull origin main --rebase
           
-          # Force the runner to synchronize with your latest web edits
-          git fetch origin main
-          git pull --rebase origin main
+          # Add the new logs
+          git add log.txt score.txt || true
           
-          # Commit only if there is actually new data
-          git commit -m "Update live score: $(date +'%Y-%m-%d %H:%M:%S')" || echo "No changes to commit"
+          # Commit using a NEW message so we know it worked
+          git commit -m "Auto-update agent logs" || echo "No changes to commit"
           
-          # Push the merged result
+          # Push to the repository
           git push origin main
