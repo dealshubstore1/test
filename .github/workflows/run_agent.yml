@@ -35,14 +35,14 @@ jobs:
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
           
-          # Pull the absolute latest changes from your repo first
+          # 1. Download the absolute latest version of your repo first
           git pull origin main --rebase
           
-          # Add the new logs
+          # 2. Add the new files created by the script
           git add log.txt score.txt || true
           
-          # Commit using a NEW message so we know it worked
-          git commit -m "Auto-update agent logs" || echo "No changes to commit"
+          # 3. Commit with a NEW message so we know it worked
+          git commit -m "Auto-update logs" || echo "No changes to commit"
           
-          # Push to the repository
+          # 4. Push safely to GitHub
           git push origin main
