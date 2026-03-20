@@ -1,16 +1,23 @@
-name: Run Pakistan Time Agent
+name: Run Cricket Score Agent
 
 on:
-  workflow_dispatch: # Allows you to run it manually with a button
+  workflow_dispatch: # Allows you to run it manually from the Actions tab
   schedule:
-    - cron: '0 * * * *' # Optional: Runs every hour
+    - cron: '*/30 * * * *' # Optional: Runs every 30 minutes
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    
+    # Give the action permission to write back to the repo
+    permissions:
+      contents: write
+
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetches all history so it can merge/rebase properly
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -18,17 +25,26 @@ jobs:
           python-version: '3.9'
 
       - name: Install dependencies
-        run: pip install requests pytz
+        run: |
+          pip install requests pytz beautifulsoup4
 
       - name: Run Agent
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: python agent.py
 
-      - name: Commit and Push log.txt
+      - name: Commit and Push results
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
-          git add log.txt
-          git commit -m "Update time log" || exit 0
-          git push
+          
+          # Add any new files created by the agent
+          git add log.txt score.txt || exit 0
+          
+          # Pull latest changes from the repo to avoid "rejected" errors
+          git pull --rebase origin main
+          
+          # Commit only if there are changes
+          git commit -m "Update live score: $(date +'%Y-%m-%d %H:%M:%S')" || exit 0
+          
+          git push origin main
