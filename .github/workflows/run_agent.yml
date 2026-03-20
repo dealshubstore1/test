@@ -1,15 +1,13 @@
 name: Run Cricket Score Agent
 
 on:
-  workflow_dispatch: # Allows you to run it manually from the Actions tab
+  workflow_dispatch:
   schedule:
-    - cron: '*/30 * * * *' # Optional: Runs every 30 minutes
+    - cron: '*/30 * * * *'
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    
-    # Give the action permission to write back to the repo
     permissions:
       contents: write
 
@@ -17,7 +15,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Fetches all history so it can merge/rebase properly
+          fetch-depth: 0 
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -25,26 +23,29 @@ jobs:
           python-version: '3.9'
 
       - name: Install dependencies
-        run: |
-          pip install requests pytz beautifulsoup4
+        run: pip install requests pytz beautifulsoup4
 
       - name: Run Agent
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: python agent.py
 
-      - name: Commit and Push results
+      - name: Commit and Push
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
           
-          # Add any new files created by the agent
+          # Add the new log files
           git add log.txt score.txt || exit 0
           
-          # Pull latest changes from the repo to avoid "rejected" errors
-          git pull --rebase origin main
+          # 1. Fetch the latest from remote
+          git fetch origin main
           
-          # Commit only if there are changes
-          git commit -m "Update live score: $(date +'%Y-%m-%d %H:%M:%S')" || exit 0
+          # 2. Rebase our local changes (the new logs) on top of the remote main
+          git rebase origin/main
           
+          # 3. Commit (if there are changes)
+          git commit -m "Update score: $(date +'%Y-%m-%d %H:%M:%S')" || echo "No changes to commit"
+          
+          # 4. Push back to main
           git push origin main
