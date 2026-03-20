@@ -15,7 +15,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 
+          fetch-depth: 0 # Required to see the full history for rebasing
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -35,17 +35,15 @@ jobs:
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
           
-          # Add the new log files
+          # Add the files
           git add log.txt score.txt || exit 0
           
-          # 1. Fetch the latest from remote
+          # Force the runner to synchronize with your latest web edits
           git fetch origin main
+          git pull --rebase origin main
           
-          # 2. Rebase our local changes (the new logs) on top of the remote main
-          git rebase origin/main
+          # Commit only if there is actually new data
+          git commit -m "Update live score: $(date +'%Y-%m-%d %H:%M:%S')" || echo "No changes to commit"
           
-          # 3. Commit (if there are changes)
-          git commit -m "Update score: $(date +'%Y-%m-%d %H:%M:%S')" || echo "No changes to commit"
-          
-          # 4. Push back to main
+          # Push the merged result
           git push origin main
